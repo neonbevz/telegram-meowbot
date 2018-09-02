@@ -1,50 +1,51 @@
-from flask import Flask
-from flask import render_template, request
-import logging
-import telegram
 import os
-import requests
-
-HOST = "https://telegram-meowbot.herokuapp.com/"
-
-app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-global bot
-bot = telegram.Bot(token='TOKEN')
-botName = "Bot Name"  # Without @
+import logging
+import telegram.ext
+from telegram.error import NetworkError, Unauthorized
+from time import sleep
+import random
 
 
-@app.route("/", methods=["POST", "GET"])
-def setWebhook():
-    if request.method == "GET":
-        logging.info("Hello, Telegram!")
-        print("Done")
-        return "OK, Telegram Bot!"
+TOKEN = '532795634:AAFxEdOiKyfAdreJDp48I32bXZfSbWsIUto'
+PORT = int(os.environ.get('PORT', '8443'))
+
+MEOWS = ['Meow', 'Meow meow', 'Meooow']
+ENDINGS = ['', '.', '?', '!']
+START = 'Meow!'
+HELP = 'Meow.'
 
 
-@app.route("/verify", methods=["POST"])
-def verification():
-    if request.method == "POST":
-        update = telegram.Update.de_json(request.get_json(force=True), bot)
-        if update is None:
-            return "Show me your TOKEN please!"
-        logging.info("Calling {}".format(update.message))
-        handle_message(update.message)
-        return "ok"
+def main():
+    updater = telegram.ext.Updater(TOKEN)
+    # add handlers
+    dp = updater.dispatcher
+
+    dp.add_handler(telegram.ext.CommandHandler('start', start))
+    dp.add_handler(telegram.ext.CommandHandler('help', help))
+
+    updater.start_webhook(listen='0.0.0.0',
+                          port=PORT,
+                          url_path=TOKEN)
+    updater.bot.set_webhook('https://telegram-meowbot.herokuapp.com/' + TOKEN)
+    updater.idle()
 
 
-def handle_message(msg):
-    text = msg.text
-    print(msg)
-    # An echo bot
-    bot.sendMessage(chat_id=msg.chat.id, text=text)
+def start(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text=START)
+
+
+def help(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text=HELP)
+
+
+def handle_update(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text=generate_response(update.message.text))
+
+
+def generate_response(text):
+    response = random.choice(MEOWS) + random.choice(ENDINGS)
+    return response
 
 
 if __name__ == "__main__":
-    s = bot.setWebhook("{}/verify".format(HOST))
-    if s:
-        logging.info("{} WebHook Setup OK!".format(botName))
-    else:
-        logging.info("{} WebHook Setup Failed!".format(botName))
-    app.run(host="0.0.0.0", debug=True)
+    main()
