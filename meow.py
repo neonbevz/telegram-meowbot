@@ -48,4 +48,10 @@ def generate_response(text):
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+            break
+        except NetworkError as ne:
+            print(ne)
+            continue
